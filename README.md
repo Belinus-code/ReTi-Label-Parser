@@ -4,7 +4,8 @@ A lightweight CLI tool to convert symbolic labels in ReTi assembly code into rel
 
 ## Features
 
-* **Label Resolution**: Automatically replaces labels in `JUMP` and `JUMPC` instructions with relative offsets ($Target - Current\_ Line$).
+* **Label Resolution**: Automatically replaces labels in `JUMP` and `JUMPC` instructions with relative offsets ($Target - Current\_Line$)[cite: 1, 2].
+* **Manual Offset Access**: Use the `*` prefix (e.g., `*Label`) to access the relative distance outside of jump instructions (e.g., in `LOADI`)[cite: 1].
 * **Preserve Formatting**: Keeps comments and indentation by default to maintain readability.
 * **Code Cleaning**: Optional mode to remove empty lines, comments, and leading whitespaces for "pure" machine code output.
 * **Flexible Output**: Overwrite the source file or save results to a dedicated output path.
@@ -27,7 +28,7 @@ python3 labels.py <PATH_TO_FILE> [OPTIONS]
 | Option | Long Form | Description | 
 | ----- | ----- | ----- | 
 | `-o` | `--output` | Path to the output file. If not provided, the source file will be overwritten. | 
-| `-c` | `--clean` | Removes all comments, empty lines, and leading indentation for "clean" code. | 
+| `-c` | `--clean` | Removes all comments, empty lines, and leading indentation for "clean" code[cite: 2]. | 
 | `-h` | `--help` | Shows the help message and exits. | 
 
 ### Examples
@@ -44,14 +45,24 @@ python3 labels.py input.reti -o output.reti -c
 
 ## Label Syntax
 
-Labels must be a single word followed by a colon (e.g., `LOOP:`, `Label1:`). They are automatically associated with the next valid instruction.
+Labels must be a single word followed by a colon (e.g., `LOOP:`, `Label1:`). They are always resolved to **relative distances** ($Target - Current\_Line$)[cite: 1, 2].
+
+### Implicit Resolution (Jumps)
+In jump instructions, the label name is replaced directly by the calculated offset[cite: 1, 2].
 ```assembly
-# Example Input
-START:
-    LOADI 5
 LOOP:
     SUBI 1
-    JUMPC > LOOP  # Will be resolved to: JUMPC > -1
+    JUMPC > LOOP  # Resolved to: JUMPC > -1 (Target 0 - Current 1)
+```
+
+### Explicit Resolution (`*` Operator)
+To use a relative offset in other instructions, prefix the label with `*`. This is particularly useful for dynamic calls where the offset is stored first[cite: 1].
+```assembly
+    LOADI *Method # Loads relative distance to 'Method' into ACC[cite: 1]
+    STORE 1024    # Store for later calculation
+    ...
+Method:
+    ADDI 10
 ```
 
 ---
