@@ -31,7 +31,7 @@ python3 labels.py <PATH_TO_FILE> [OPTIONS]
 | `-c` | `--clean` | Removes all comments, empty lines, and leading indentation for "clean" code. | 
 | `-h` | `--help` | Shows the help message and exits. | 
 
-Usage of `-c` is recomended! 
+Usage of `-c` and `-o` is recomended! 
 
 ### Examples
 
@@ -60,7 +60,7 @@ LOOP:
 ### Explicit Resolution (`*` Operator)
 To use a relative offset in other instructions, prefix the label with `*`. This is particularly useful for dynamic calls where the offset is stored first.
 ```assembly
-    LOADI *Method # Loads relative distance to 'Method' into ACC[cite: 1]
+    LOADI *Method # Loads relative distance to 'Method' into ACC
     STORE 1024    # Store for later calculation
     ...
 Method:
