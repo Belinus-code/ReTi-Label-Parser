@@ -4,7 +4,7 @@ A lightweight CLI tool to convert symbolic labels in ReTi assembly code into rel
 
 ## Features
 
-* **Label Resolution**: Automatically replaces labels in `JUMP` and `JUMPC` instructions with relative offsets ($Target - Current\_Line$).
+* **Label Resolution**: Automatically replaces labels in `JUMP` and `JUMPC` instructions with relative offsets ($Target - Current\_ Line$).
 * **Preserve Formatting**: Keeps comments and indentation by default to maintain readability.
 * **Code Cleaning**: Optional mode to remove empty lines, comments, and leading whitespaces for "pure" machine code output.
 * **Flexible Output**: Overwrite the source file or save results to a dedicated output path.
