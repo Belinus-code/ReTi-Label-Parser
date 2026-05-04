@@ -44,7 +44,7 @@ python3 labels.py input.reti -o output.reti -c
 
 ## Label Syntax
 
-Labels must be a single word followed by a colon (e.g., `LOOP:`). They are automatically associated with the next valid instruction.
+Labels must be a single word followed by a colon (e.g., `LOOP:`, `Label1:`). They are automatically associated with the next valid instruction.
 ```assembly
 # Example Input
 START:
