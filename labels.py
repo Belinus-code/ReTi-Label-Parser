@@ -76,11 +76,9 @@ def findLabels(code: list[str]) -> list[tuple[int, str, list[str]]]:
 
 def replaceLabels(code: list[tuple[int, str, list[str]]]) -> list[str]:
     """
-    Iterates through the parsed code and replaces label names in JUMP
-    and JUMPC instructions with their relative instruction offsets.
-    Raises ValueError if a referenced label is not defined.
+    Replaces label names with relative offsets.
+    Supports standard JUMP/JUMPC syntax and generic *LABEL syntax anywhere.
     """
-    # 1. Map labels to their instruction index
     label_map = {}
     for instr_idx, _, labels in code:
         if instr_idx != -1:
@@ -89,47 +87,46 @@ def replaceLabels(code: list[tuple[int, str, list[str]]]) -> list[str]:
 
     result = []
 
-    # 2. Second pass to calculate distances
     for i, (instr_idx, original_line, _) in enumerate(code):
         line_num = i + 1
-
         if instr_idx == -1:
             result.append(original_line)
             continue
 
+        modified_line = original_line
         parts = original_line.split()
-        if not parts:
-            result.append(original_line)
-            continue
 
-        command = parts[0].upper()
-        target_label = None
+        # 1. Handle legacy JUMP/JUMPC (without asterisk)
+        command = parts[0].upper() if parts else ""
+        legacy_target = None
+        if command == "JUMP" and len(parts) >= 2 and not parts[1].startswith("*"):
+            legacy_target = parts[1]
+        elif command == "JUMPC" and len(parts) >= 3 and not parts[2].startswith("*"):
+            legacy_target = parts[2]
 
-        # Extract potential label based on command type
-        if command == "JUMP" and len(parts) >= 2:
-            target_label = parts[1]
-        elif command == "JUMPC" and len(parts) >= 3:
-            target_label = parts[2]
-
-        if target_label:
-            if target_label not in label_map:
+        if legacy_target:
+            if legacy_target not in label_map:
                 raise ValueError(
-                    f"Error in line {line_num}: Label '{target_label}' not found."
+                    f"Error in line {line_num}: Label '{legacy_target}' not found."
                 )
+            offset = label_map[legacy_target] - instr_idx
+            modified_line = modified_line.replace(legacy_target, str(offset), 1)
 
-            target_idx = label_map[target_label]
-            relative_offset = target_idx - instr_idx
+        # 2. Handle generic *LABEL syntax (anywhere in the line)
+        # We look for all words starting with '*'
+        for word in parts:
+            if word.startswith("*"):
+                label_name = word[1:]  # Remove the '*'
+                if label_name not in label_map:
+                    raise ValueError(
+                        f"Error in line {line_num}: Referenced label '{label_name}' not found."
+                    )
 
-            # Replace only the label part, keeping formatting intact
-            label_pos = original_line.rfind(target_label)
-            modified_line = (
-                original_line[:label_pos]
-                + str(relative_offset)
-                + original_line[label_pos + len(target_label) :]
-            )
-            result.append(modified_line)
-        else:
-            result.append(original_line)
+                offset = label_map[label_name] - instr_idx
+                # Replace the exact occurrence of *label with the numeric offset
+                modified_line = modified_line.replace(word, str(offset), 1)
+
+        result.append(modified_line)
 
     return result
 
