@@ -28,10 +28,11 @@ python3 labels.py <PATH_TO_FILE> [OPTIONS]
 | Option | Long Form | Description | 
 | ----- | ----- | ----- | 
 | `-o` | `--output` | Path to the output file. If not provided, the source file will be overwritten. | 
-| `-c` | `--clean` | Removes all comments, empty lines, and leading indentation for "clean" code. | 
+| `-c` | `--clean` | Removes all comments and empty lines for "clean" code. | 
+| `-i` | `--indentation` | Removes all leading whitespaces and indentations. |
 | `-h` | `--help` | Shows the help message and exits. | 
 
-Usage of `-c` and `-o` is recomended! 
+Usage of `-o` and `-i` is recomended! 
 
 ### Examples
 

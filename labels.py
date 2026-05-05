@@ -30,8 +30,7 @@ def getCode(file_path: str) -> list[str]:
 
 def cleanCode(code: list[str]) -> list[str]:
     """
-    Removes empty lines, lines consisting only of comments (#),
-    and trims leading/trailing whitespace from each line.
+    Removes empty lines, lines consisting only of comments (#).
     """
     cleaned_lines = []
     for line in code:
@@ -40,6 +39,17 @@ def cleanCode(code: list[str]) -> list[str]:
         if not stripped_line or stripped_line.startswith("#"):
             continue
 
+        cleaned_lines.append(stripped_line)
+    return cleaned_lines
+
+
+def cleanIndent(code: list[str]) -> list[str]:
+    """
+    Trims leading/trailing whitespace and indentations from each line.
+    """
+    cleaned_lines = []
+    for line in code:
+        stripped_line = line.strip()
         cleaned_lines.append(stripped_line)
     return cleaned_lines
 
@@ -165,7 +175,13 @@ def main():
         "-c",
         "--clean",
         action="store_true",
-        help="Clean leading whitespaces and comments",
+        help="Clean comments and empty lines",
+    )
+    parser.add_argument(
+        "-i",
+        "--indentation",
+        action="store_true",
+        help="Clean leading whitespaces and indentations",
     )
 
     args = parser.parse_args()
@@ -179,6 +195,8 @@ def main():
 
         if args.clean:
             processed_code = cleanCode(processed_code)
+        if args.indentation:
+            processed_code = cleanIndent(processed_code)
 
         output_path = args.output if args.output is not None else args.path
         saveCode(processed_code, output_path)
