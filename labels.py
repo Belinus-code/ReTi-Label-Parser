@@ -86,8 +86,7 @@ def findLabels(code: list[str]) -> list[tuple[int, str, list[str]]]:
 
 def replaceLabels(code: list[tuple[int, str, list[str]]]) -> list[str]:
     """
-    Replaces label names with relative offsets.
-    Supports standard JUMP/JUMPC syntax and generic *LABEL syntax anywhere.
+    Replaces label names with relative offsets and preserves column alignment.
     """
     label_map = {}
     for instr_idx, _, labels in code:
@@ -119,22 +118,31 @@ def replaceLabels(code: list[tuple[int, str, list[str]]]) -> list[str]:
                 raise ValueError(
                     f"Error in line {line_num}: Label '{legacy_target}' not found."
                 )
-            offset = label_map[legacy_target] - instr_idx
-            modified_line = modified_line.replace(legacy_target, str(offset), 1)
 
-        # 2. Handle generic *LABEL syntax (anywhere in the line)
-        # We look for all words starting with '*'
+            offset = label_map[legacy_target] - instr_idx
+            offset_str = str(offset)
+
+            # Padding berechnen: Länge des Labels - Länge der Zahl
+            padding = " " * max(0, len(legacy_target) - len(offset_str))
+            modified_line = modified_line.replace(
+                legacy_target, offset_str + padding, 1
+            )
+
+        # 2. Handle generic *LABEL syntax
         for word in parts:
             if word.startswith("*"):
-                label_name = word[1:]  # Remove the '*'
+                label_name = word[1:]
                 if label_name not in label_map:
                     raise ValueError(
                         f"Error in line {line_num}: Referenced label '{label_name}' not found."
                     )
 
                 offset = label_map[label_name] - instr_idx
-                # Replace the exact occurrence of *label with the numeric offset
-                modified_line = modified_line.replace(word, str(offset), 1)
+                offset_str = str(offset)
+
+                # Hier muss die Länge von '*LABEL' (also inklusive Stern) berücksichtigt werden
+                padding = " " * max(0, len(word) - len(offset_str))
+                modified_line = modified_line.replace(word, offset_str + padding, 1)
 
         result.append(modified_line)
 
