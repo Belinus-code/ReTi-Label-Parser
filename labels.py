@@ -6,23 +6,33 @@
 
 import sys
 import argparse
+import os
 
 
 def getCode(file_path: str) -> list[str]:
     """
-    Reads a file and returns its content as a list of strings,
-    preserving newline characters.
+    Liest eine Datei und unterstützt #include "dateiname" Direktiven.
+    Fügt den Inhalt der inkludierten Dateien direkt an der entsprechenden Stelle ein.
     """
     lines = []
+    base_dir = os.path.dirname(os.path.abspath(file_path))
+
     try:
         with open(file_path, "r", encoding="utf-8") as file:
             for line in file:
-                lines.append(line)
+                stripped = line.strip()
+                if stripped.startswith('#include "') and stripped.endswith('"'):
+                    include_filename = stripped[10:-1]
+                    include_path = os.path.join(base_dir, include_filename)
+                    lines.extend(getCode(include_path))
+                else:
+                    lines.append(line)
+
     except FileNotFoundError:
         print(f"Error: File '{file_path}' does not exist.")
         sys.exit(1)
     except Exception as e:
-        print(f"An unexpected error occurred while reading: {e}")
+        print(f"An unexpected error occurred while reading {file_path}: {e}")
         sys.exit(1)
 
     return lines
