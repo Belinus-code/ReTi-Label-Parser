@@ -68,18 +68,40 @@ def findLabels(code: list[str]) -> list[tuple[int, str, list[str]]]:
     """
     Parses code lines, assigning indices to instructions while
     ignoring labels in the count and attaching them to the next valid instruction.
-    Comments and empty lines are assigned an index of -1.
+    Returns the parsed result and prevents duplicates internally.
     """
     result = []
     instruction_idx = 0
     pending_labels = []
 
-    for line in code:
+    # NEW: Keep track of all global labels to detect duplicates!
+    global_label_dict = {}
+
+    for line_idx, line in enumerate(code):
         stripped = line.strip()
 
         # 1. Check if it's a label (one word ending with ':')
         if stripped.endswith(":") and len(stripped.split()) == 1:
-            pending_labels.append(stripped[:-1])
+            label_name = stripped[:-1]
+
+            # --- THE TRIPWIRE FOR DUPLICATE LABELS ---
+            if label_name in global_label_dict:
+                print(f"\n[ASSEMBLER ERROR] Namespace Collision!")
+                print(f"Das Label '{label_name}:' wurde mehrfach definiert!")
+                print(
+                    f"Vorherige Definition zeigte auf Instruktion {global_label_dict[label_name]}"
+                )
+                print(
+                    f"Neue Definition gefunden bei Zeile {line_idx} im kompilierten Code."
+                )
+                print(
+                    "Behebung: Nutze eindeutige Präfixe für deine Labels (z.B. MAIN_LOOP: statt LOOP:)."
+                )
+                sys.exit(1)
+
+            pending_labels.append(label_name)
+            # Temporarily store the index it WILL point to
+            global_label_dict[label_name] = instruction_idx
 
         # 2. Check if it's a comment or an empty line
         elif not stripped or stripped.startswith("#"):
