@@ -97,6 +97,7 @@ def findLabels(code: list[str]) -> list[tuple[int, str, list[str]]]:
 def replaceLabels(code: list[tuple[int, str, list[str]]]) -> list[str]:
     """
     Replaces label names with relative offsets and preserves column alignment.
+    Strictly uses the legacy Python interpreter syntax (JUMP target / JUMPC cond target).
     """
     label_map = {}
     for instr_idx, _, labels in code:
@@ -115,13 +116,33 @@ def replaceLabels(code: list[tuple[int, str, list[str]]]) -> list[str]:
         modified_line = original_line
         parts = original_line.split()
 
-        # 1. Handle legacy JUMP/JUMPC (without asterisk)
+        # 1. Handle JUMP and JUMPC (with whitespace-separated conditions)
         command = parts[0].upper() if parts else ""
         legacy_target = None
+
         if command == "JUMP" and len(parts) >= 2 and not parts[1].startswith("*"):
-            legacy_target = parts[1]
+            target_candidate = parts[1]
+            # Check if it's already a raw number (relative jump)
+            try:
+                int(target_candidate)
+                is_numeric = True
+            except ValueError:
+                is_numeric = False
+
+            if not is_numeric:
+                legacy_target = target_candidate
+
         elif command == "JUMPC" and len(parts) >= 3 and not parts[2].startswith("*"):
-            legacy_target = parts[2]
+            target_candidate = parts[2]
+            # Check if it's already a raw number (relative conditional jump)
+            try:
+                int(target_candidate)
+                is_numeric = True
+            except ValueError:
+                is_numeric = False
+
+            if not is_numeric:
+                legacy_target = target_candidate
 
         if legacy_target:
             if legacy_target not in label_map:
@@ -150,7 +171,7 @@ def replaceLabels(code: list[tuple[int, str, list[str]]]) -> list[str]:
                 offset = label_map[label_name] - instr_idx
                 offset_str = str(offset)
 
-                # Hier muss die Länge von '*LABEL' (also inklusive Stern) berücksichtigt werden
+                # Spaltenbündigkeit beibehalten (inklusive Sternchen-Länge)
                 padding = " " * max(0, len(word) - len(offset_str))
                 modified_line = modified_line.replace(word, offset_str + padding, 1)
 
