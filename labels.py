@@ -7,12 +7,14 @@
 import sys
 import argparse
 import os
+import re
 
 
 def getCode(file_path: str) -> list[str]:
     """
-    Liest eine Datei und unterstützt #include "dateiname" Direktiven.
-    Fügt den Inhalt der inkludierten Dateien direkt an der entsprechenden Stelle ein.
+    Reads a file and supports #include "filename" directives.
+    Inserts the content of included files at the correct position.
+    Also replaces characters in single quotes (e.g. 'a') with their (ASCII value + 100).
     """
     lines = []
     base_dir = os.path.dirname(os.path.abspath(file_path))
@@ -26,7 +28,12 @@ def getCode(file_path: str) -> list[str]:
                     include_path = os.path.join(base_dir, include_filename)
                     lines.extend(getCode(include_path))
                 else:
-                    lines.append(line)
+                    # Find all occurrences of exactly one character between single quotes
+                    # and replace it using the lambda function: str(ord(char) + 100)
+                    processed_line = re.sub(
+                        r"'(.)'", lambda match: str(ord(match.group(1)) + 100), line
+                    )
+                    lines.append(processed_line)
 
     except FileNotFoundError:
         print(f"Error: File '{file_path}' does not exist.")
