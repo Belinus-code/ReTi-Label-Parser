@@ -10,13 +10,39 @@ import os
 import re
 
 
-def getCode(file_path: str) -> list[str]:
+# Matches comments, string literals and char literals (left untouched) or any other text
+_TOKEN_RE = re.compile(r"""(#.*$|"[^"]*"|'(?:\\.|[^'])')|([^#"']+|.)""", re.DOTALL)
+
+
+def applyDefines(line: str, defines: dict[str, str]) -> str:
+    """
+    Replaces every defined name (whole word) with its value.
+    Comments, "strings" and 'c' char literals are left untouched.
+    """
+    if not defines:
+        return line
+    names = sorted(defines, key=len, reverse=True)
+    name_re = re.compile(r"(?<!\w)(?:" + "|".join(map(re.escape, names)) + r")(?!\w)")
+
+    def replaceInCode(match: re.Match) -> str:
+        if match.group(1) is not None:
+            return match.group(1)
+        return name_re.sub(lambda m: defines[m.group(0)], match.group(2))
+
+    return _TOKEN_RE.sub(replaceInCode, line)
+
+
+def getCode(file_path: str, defines: dict[str, str] | None = None) -> list[str]:
     """
     Reads a file and supports #include "filename" directives.
     Inserts the content of included files at the correct position.
+    Supports plain aliases via "#define NAME VALUE" (no conditionals, no arguments);
+    NAME is replaced by VALUE in all following lines (including included files).
     Also replaces characters in single quotes (e.g. 'a') with their (ASCII value + 100).
     """
     lines = []
+    if defines is None:
+        defines = {}
     base_dir = os.path.dirname(os.path.abspath(file_path))
 
     try:
@@ -26,14 +52,59 @@ def getCode(file_path: str) -> list[str]:
                 if stripped.startswith('#include "') and stripped.endswith('"'):
                     include_filename = stripped[10:-1]
                     include_path = os.path.join(base_dir, include_filename)
-                    lines.extend(getCode(include_path))
+                    lines.extend(getCode(include_path, defines))
+                elif re.match(r"#define\s", stripped):
+                    parts = re.sub(r"\s*#.*$", "", stripped[len("#define"):]).split(None, 1)
+                    if len(parts) != 2:
+                        raise ValueError(
+                            f"Invalid #define in {file_path}: '{stripped}' (expected '#define NAME VALUE')"
+                        )
+                    # Resolve earlier aliases in the value, so chains like Y -> X -> 5 work
+                    defines[parts[0]] = applyDefines(parts[1], defines)
                 else:
-                    # Find all occurrences of exactly one character between single quotes
-                    # and replace it using the lambda function: str(ord(char) + 100)
-                    processed_line = re.sub(
-                        r"'(.)'", lambda match: str(ord(match.group(1)) + 100), line
-                    )
-                    lines.append(processed_line)
+                    line = applyDefines(line, defines)
+                    # 1. Match lines containing double-quoted strings (e.g., PRINTC "Hi!\n")
+                    string_match = re.search(r'^(.*?)"([^"]+)"(.*)$', line)
+
+                    if string_match:
+                        prefix = string_match.group(1)   # Everything before the quote (e.g., "    PRINTC ")
+                        raw_str = string_match.group(2)  # The string content (e.g., "Hi!\n")
+                        suffix = string_match.group(3)   # Everything after the quote (e.g., " # print greeting")
+                        
+                        # Decode escape sequences like \n to real actual characters
+                        decoded_str = raw_str.encode('utf-8').decode('unicode_escape')
+                        
+                        for char in decoded_str:
+                            # Re-escape special characters so they look like '\n' for the assembler
+                            if char == '\n':
+                                char_repr = r"'\n'"
+                            elif char == '\t':
+                                char_repr = r"'\t'"
+                            elif char == '\r':
+                                char_repr = r"'\r'"
+                            elif char == "'":
+                                char_repr = r"'\''"
+                            else:
+                                char_repr = f"'{char}'"
+                            
+                            # Construct the expanded line for each character
+                            expanded_line = f"{prefix}{char_repr}{suffix}"
+                            
+                            # 2. Translate single characters (now supporting escapes) to +100 addresses
+                            processed_line = re.sub(
+                                r"'(\\(?:n|t|r|')|.)'", 
+                                lambda match: str(ord(match.group(1).encode('utf-8').decode('unicode_escape')) + 100), 
+                                expanded_line
+                            )
+                            lines.append(processed_line)
+                    else:
+                        # Standard processing for lines without double quotes
+                        processed_line = re.sub(
+                            r"'(\\(?:n|t|r|')|.)'", 
+                            lambda match: str(ord(match.group(1).encode('utf-8').decode('unicode_escape')) + 100), 
+                            line
+                        )
+                        lines.append(processed_line)
 
     except FileNotFoundError:
         print(f"Error: File '{file_path}' does not exist.")

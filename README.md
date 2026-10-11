@@ -6,6 +6,7 @@ A lightweight CLI tool to convert symbolic labels in ReTi assembly code into rel
 
 * **Label Resolution**: Automatically replaces labels in `JUMP` and `JUMPC` instructions with relative offsets ($Target - Current\_Line$).
 * **Manual Offset Access**: Use the `*` prefix (e.g., `*Label`) to access the relative distance outside of jump instructions (e.g., in `LOADI`).
+* **Simple Aliases**: `#define NAME VALUE` replaces every whole-word `NAME` with `VALUE` (plain text substitution, no `#ifdef`, no arguments).
 * **Preserve Formatting**: Keeps comments and indentation by default to maintain readability.
 * **Code Cleaning**: Optional mode to remove empty lines, comments, and leading whitespaces for "pure" machine code output.
 * **Flexible Output**: Overwrite the source file or save results to a dedicated output path.
@@ -66,6 +67,16 @@ To use a relative offset in other instructions, prefix the label with `*`. This 
     ...
 Method:
     ADDI 10
+```
+
+## Defines
+
+`#define NAME VALUE` is a dumb text alias: from that line on, every whole-word occurrence of `NAME` is replaced by `VALUE`. Defines also apply inside `#include`d files and may refer to earlier defines. Comments, `"strings"` and `'c'` literals are not touched, and the `#define` line itself is removed from the output.
+```assembly
+#define BUFFER_POINTER -2
+#define Y123 X123
+
+    LOADI BUFFER_POINTER   # becomes: LOADI -2
 ```
 
 ---
