@@ -4,7 +4,7 @@ A lightweight CLI tool to convert symbolic labels in ReTi assembly code into rel
 
 ## Features
 
-* **Label Resolution**: Automatically replaces labels in `JUMP` and `JUMPC` instructions with relative offsets ($Target - Current\_Line$).
+* **Label Resolution**: Automatically replaces labels in `JUMP`, `JUMPC` and `READ` instructions with relative offsets ($Target - Current\_Line$).
 * **Manual Offset Access**: Use the `*` prefix (e.g., `*Label`) to access the relative distance outside of jump instructions (e.g., in `LOADI`).
 * **Simple Aliases**: `#define NAME VALUE` replaces every whole-word `NAME` with `VALUE` (plain text substitution, no `#ifdef`, no arguments).
 * **Preserve Formatting**: Keeps comments and indentation by default to maintain readability.
@@ -78,6 +78,8 @@ Method:
 
     LOADI BUFFER_POINTER   # becomes: LOADI -2
 ```
+
+`#undefine NAME` (short form: `#undef NAME`) removes a define again; from that line on `NAME` is no longer replaced. Undefining an unknown name is silently ignored, and `NAME` can be defined again afterwards.
 
 ---
 

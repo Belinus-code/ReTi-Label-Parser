@@ -38,6 +38,7 @@ def getCode(file_path: str, defines: dict[str, str] | None = None) -> list[str]:
     Inserts the content of included files at the correct position.
     Supports plain aliases via "#define NAME VALUE" (no conditionals, no arguments);
     NAME is replaced by VALUE in all following lines (including included files).
+    "#undefine NAME" (or "#undef NAME") removes the alias again.
     Also replaces characters in single quotes (e.g. 'a') with their (ASCII value + 100).
     """
     lines = []
@@ -61,6 +62,13 @@ def getCode(file_path: str, defines: dict[str, str] | None = None) -> list[str]:
                         )
                     # Resolve earlier aliases in the value, so chains like Y -> X -> 5 work
                     defines[parts[0]] = applyDefines(parts[1], defines)
+                elif re.match(r"#undef(ine)?\s", stripped):
+                    parts = re.sub(r"\s*#.*$", "", re.sub(r"^#undef(ine)?", "", stripped)).split()
+                    if len(parts) != 1:
+                        raise ValueError(
+                            f"Invalid #undefine in {file_path}: '{stripped}' (expected '#undefine NAME')"
+                        )
+                    defines.pop(parts[0], None)
                 else:
                     line = applyDefines(line, defines)
                     # 1. Match lines containing double-quoted strings (e.g., PRINTC "Hi!\n")
@@ -216,11 +224,11 @@ def replaceLabels(code: list[tuple[int, str, list[str]]]) -> list[str]:
         modified_line = original_line
         parts = original_line.split()
 
-        # 1. Handle JUMP and JUMPC (with whitespace-separated conditions)
+        # 1. Handle JUMP, READ and JUMPC (with whitespace-separated conditions)
         command = parts[0].upper() if parts else ""
         legacy_target = None
 
-        if command == "JUMP" and len(parts) >= 2 and not parts[1].startswith("*"):
+        if command in ("JUMP", "READ") and len(parts) >= 2 and not parts[1].startswith("*"):
             target_candidate = parts[1]
             # Check if it's already a raw number (relative jump)
             try:
